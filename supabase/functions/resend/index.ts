@@ -2,51 +2,36 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
-const handler = async (request: Request): Promise<Response> => {
-    try {
+const handler = async (_request: Request): Promise<Response> => {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from: 'onboarding@resend.dev',
+      to: 'delivered@resend.dev',
+      subject: 'hello world',
+      html: '<strong>it works!</strong>',
+    }),
+  })
 
+  const data = await res.json()
 
-        const res = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${RESEND_API_KEY}`,
-            },
-            body: JSON.stringify({
-                from: "email@tasteofbaern.ch",
-                to: "info@tasteofbaern.ch",
-                subject: "test",
-                html: `
-                <div>
-                    <p>From: ${"name"}</p>
-                    <p>${"message"}</p>
-                </div>`,
-            }),
-        });
+  return new Response(JSON.stringify(data), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+}
 
-        const data = await res.json();
-
-        return new Response(JSON.stringify(data), {
-            status: 200,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-    } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-    }
-};
-
-serve(handler);
+serve(handler)
 
 // To invoke:
 // curl -i --location --request POST 'http://localhost:54321/functions/v1/' \
