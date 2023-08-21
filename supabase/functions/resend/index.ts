@@ -2,62 +2,79 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js'
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  localStorage: false, 
-  persistSession: true,
-  cookieOptions: {
-    domain: '.tasteofbaern.ch',
-    secure: true,
-  },
-});
+const supabaseUrl = Deno.env.get('SUPABASE_URL')
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
 const handler = async (_request: Request): Promise<Response> => {
-
   // Retrieve data from the contactForm table
   const { data: contactForm, error } = await supabase
     .from('contactForm')
     .select('*')
-    .single()
+    .order('id', { ascending: false })
+    .limit(1)
 
   if (error) {
+    console.error(error)
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        
+      },
+    })
+  }
+
+  // Check if the contactForm array is not empty
+  if (contactForm.length > 0) {
+    // Extract the relevant data from the first entry
+    const contact = contactForm[0]
+    const from = contact.from
+    const to = contact.to
+    const subject = contact.subject
+    const html = contact.html
+
+    // Send an email using the Resend API with the extracted data
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+
+      body: JSON.stringify({
+        from,
+        to,
+        subject,
+        html,
+      }),
+    })
+
+    const data = await res.json()
+    console.log(JSON.stringify(data, null, 2))
+
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+  } else {
+    // Handle the case where the contactForm array is empty
+    console.error('No entries found in contactForm table')
+
+    return new Response(JSON.stringify({ error: 'No entries found in contactForm table' }), {
+      status: 500,
       headers: {
         'Content-Type': 'application/json',
       },
     })
   }
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-    },
-    body: JSON.stringify({
-      from: contactForm.email,
-      to: 'info@tasteofbaern.ch',
-      subject: contactForm.subject,
-      html: `<strong>${contactForm.message}</strong>`,
-    }),
-  })
-
-  const data = await res.json()
-
-  return new Response(JSON.stringify(data), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
 }
 
 serve(handler)
