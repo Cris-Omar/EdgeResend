@@ -12,6 +12,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey)
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
 const handler = async (_request: Request): Promise<Response> => {
+  console.log('calling edge function' )
   // Retrieve data from the contactForm table
   const { data: contactForm, error } = await supabase
     .from('contactForm')
@@ -20,25 +21,32 @@ const handler = async (_request: Request): Promise<Response> => {
     .limit(1)
 
   if (error) {
-    console.error(error)
+    console.error('error occured', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        
       },
     })
   }
 
   // Check if the contactForm array is not empty
   if (contactForm.length > 0) {
+    console.log('contactForm: ', contactForm)
     // Extract the relevant data from the first entry
     const contact = contactForm[0]
-    const from = contact.from
-    const to = contact.to
+    const from = "contact@tasteofbaern.ch"
+    const to = "info@tasteofbaern.ch"
     const subject = contact.subject
-    const html = contact.html
 
+    const html = `
+    <html>
+      <body>
+        <p>Email: ${contact.email}</p>
+        <p>Message: ${contact.message}</p>
+      </body>
+    </html>
+  `
     // Send an email using the Resend API with the extracted data
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -56,6 +64,7 @@ const handler = async (_request: Request): Promise<Response> => {
     })
 
     const data = await res.json()
+    console.log('email res: ', data)
     console.log(JSON.stringify(data, null, 2))
 
     return new Response(JSON.stringify(data), {
@@ -80,7 +89,7 @@ const handler = async (_request: Request): Promise<Response> => {
 serve(handler)
 
 // To invoke:
-// curl -i --location --request POST "http://localhost:54321/functions/v1/" \
-//   --header "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0" \
-//   --header "Content-Type: application/json" \
-//   --data "{"name":"Functions"}"
+// curl -i --location --request POST 'http://localhost:54321/functions/v1/' \
+//   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
+//   --header 'Content-Type: application/json' \
+//   --data '{"name":"Functions"}'
