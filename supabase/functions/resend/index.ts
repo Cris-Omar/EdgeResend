@@ -12,6 +12,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey)
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
 const handler = async (_request: Request): Promise<Response> => {
+  console.log('calling edge function' )
   // Retrieve data from the contactForm table
   const { data: contactForm, error } = await supabase
     .from('contactForm')
@@ -32,6 +33,7 @@ const handler = async (_request: Request): Promise<Response> => {
 
   // Check if the contactForm array is not empty
   if (contactForm.length > 0) {
+    console.log('contactForm: ', contactForm)
     // Extract the relevant data from the first entry
     const contact = contactForm[0]
     const from = contact.from
