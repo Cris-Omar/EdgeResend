@@ -15,7 +15,7 @@ const handler = async (_request: Request): Promise<Response> => {
   console.log('calling edge function' )
   // Retrieve data from the contactForm table
   const { data: contactForm, error } = await supabase
-    .from('contactForm')
+    .from('ContactForm')
     .select('*')
     .order('id', { ascending: false })
     .limit(1)
@@ -75,10 +75,10 @@ const handler = async (_request: Request): Promise<Response> => {
       },
     })
   } else {
-    // Handle the case where the contactForm array is empty
-    console.error('No entries found in contactForm table')
+    // Handle the case where the ContactForm array is empty
+    console.error('No entries found in ContactForm table')
 
-    return new Response(JSON.stringify({ error: 'No entries found in contactForm table' }), {
+    return new Response(JSON.stringify({ error: 'No entries found in ContactForm table' }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
